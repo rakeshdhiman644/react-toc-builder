@@ -6,6 +6,12 @@
 
 A lightweight and customizable Table of Contents (TOC) generator for React applications. Automatically scans HTML content for headings (h2–h6) and injects a collapsible, stylized TOC with support for custom icons and styling.
 
+## 🎬 Demo
+
+<p>
+  <img src="./demo/review-demo.gif" alt="react-toc-builder-demo" width="100%" />
+</p>
+
 ## ✨ Features
 
 - 🚀 **Lightweight**: Minimal bundle size with zero dependencies
