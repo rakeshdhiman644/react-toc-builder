@@ -35,20 +35,56 @@ function generateToc(contentHtml) {
 
   // If icon is an image URL, render <img>, otherwise assume SVG string
   var iconHtml = icon ? icon.trim().startsWith("<svg") ? icon : "<img src=\"".concat(icon, "\" alt=\"toggle-icon\" width=\"18\" height=\"18\" />") : defaultIcon;
-  var tocHtml = "\n  <style>\n  .rtb-toc{\n    border: 1px solid #ddd;\n    padding: 10px;\n    margin-bottom: 1rem;\n    border-radius: 4px;\n    display: table;\n    box-shadow: 0 1px 1px #0000000d;\n  }\n.rtb-toc-header {\n    margin-bottom: 0;\n    display: flex;\n    align-items: center;\n    justify-content: space-between;\n    gap: 10px;\n  }\n  </style>\n    <div class=\"rtb-toc\">\n      <div class=\"rtb-toc-header\">\n        <b>Table of Contents</b>\n        <button data-toc-toggle class=\"rtb-toggle-btn\" aria-label=\"Toggle TOC\" style=\"cursor:pointer;\">\n          ".concat(iconHtml, "\n        </button>\n      </div>\n      <ul class=\"rtb-toc-list\" style=\"display: none; list-style: none; padding: 0;\">\n  ");
+  var tocHtml = "\n  <style>\n  .rtb-toc {\n    border: 1px solid #ddd;\n    padding: 10px;\n    margin-bottom: 1rem;\n    border-radius: 4px;\n    display: table;\n    box-shadow: 0 1px 1px #0000000d;\n    min-width: 200px;\n    background: #fff;\n  }\n  .rtb-toc-header {\n    margin-bottom: 0;\n    display: flex;\n    align-items: center;\n    justify-content: space-between;\n    gap: 10px;\n  }\n  .rtb-toc-list {\n    display: none;\n    list-style: none;\n    padding: 0;\n    margin: 0;\n  }\n  .rtb-toc-item {\n    margin-top: 5px;\n  }\n  .rtb-toc-item a {\n    text-decoration: none;\n    color: inherit;\n    display: block;\n    padding: 2px 0;\n    transition: color 0.2s;\n  }\n  .rtb-toc-item a:hover, .rtb-toc-item a.active {\n    color: #007bff;\n  }\n  /* Indentation for nested levels */\n  .rtb-toc-list .rtb-toc-list {\n    display: block; /* Always show nested lists if parent is visible */\n    padding-left: 20px;\n    margin-top: 0;\n  }\n  .rtb-toc-number {\n    margin-right: 5px;\n    font-weight: 500;\n    color: #666;\n  }\n  </style>\n    <div class=\"rtb-toc\">\n      <div class=\"rtb-toc-header\">\n        <b>Table of Contents</b>\n        <button data-toc-toggle class=\"rtb-toggle-btn\" aria-label=\"Toggle TOC\" style=\"cursor:pointer; background:none; border:none; padding:0; display:flex;\">\n          ".concat(iconHtml, "\n        </button>\n      </div>\n      <ul class=\"rtb-toc-list\" style=\"display: none; list-style: none; padding: 0;\">\n  ");
   var headingRegex = /<h([2-6])[^>]*>(.*?)<\/h\1>/gi;
   var match;
-  var count = 1;
   var contentWithIds = contentHtml;
+  var headings = [];
+
+  // 1. Extract headings and inject IDs
   while ((match = headingRegex.exec(contentHtml)) !== null) {
-    var tag = match[1];
+    var level = parseInt(match[1]);
     var text = match[2].replace(/<[^>]+>/g, "").trim();
     if (!text) continue;
-    var id = "toc-".concat(tag, "-").concat(match.index);
-    contentWithIds = contentWithIds.replace(match[0], "<h".concat(tag, " id=\"").concat(id, "\">").concat(text, "</h").concat(tag, ">"));
-    tocHtml += "<li class=\"rtb-toc-item\">".concat(count, ". <a href=\"#").concat(id, "\">").concat(text, "</a></li>");
-    count++;
+    var id = "toc-".concat(level, "-").concat(match.index);
+    contentWithIds = contentWithIds.replace(match[0], "<h".concat(level, " id=\"").concat(id, "\">").concat(match[2], "</h").concat(level, ">"));
+    headings.push({
+      level: level,
+      text: text,
+      id: id,
+      children: []
+    });
   }
+
+  // 2. Build Tree Structure
+  var root = {
+    level: 0,
+    children: []
+  };
+  var stack = [root];
+  headings.forEach(function (heading) {
+    while (stack.length > 1 && stack[stack.length - 1].level >= heading.level) {
+      stack.pop();
+    }
+    var parent = stack[stack.length - 1];
+    parent.children.push(heading);
+    stack.push(heading);
+  });
+
+  // 3. Recursive Render
+  function renderList(items) {
+    var prefix = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "";
+    if (items.length === 0) return "";
+    var html = "";
+    items.forEach(function (item, index) {
+      var num = index + 1;
+      var itemLabel = prefix ? "".concat(prefix, ".").concat(num) : "".concat(num);
+      var displayLabel = prefix ? itemLabel : "".concat(itemLabel, ".");
+      html += "<li class=\"rtb-toc-item\">\n        <a href=\"#".concat(item.id, "\">\n          <span class=\"rtb-toc-number\">").concat(displayLabel, "</span>").concat(item.text, "\n        </a>\n        ").concat(item.children.length > 0 ? "<ul class=\"rtb-toc-list\">".concat(renderList(item.children, itemLabel), "</ul>") : "", "\n      </li>");
+    });
+    return html;
+  }
+  tocHtml += renderList(root.children);
   tocHtml += "\n      </ul>\n    </div>\n  ";
 
   // 🧩 Insert TOC after the nth paragraph (positionAfter)
