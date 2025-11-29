@@ -2,6 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/react-toc-builder.svg)](https://www.npmjs.com/package/react-toc-builder)
 [![npm downloads](https://img.shields.io/npm/dm/react-toc-builder.svg)](https://www.npmjs.com/package/react-toc-builder)
+[![npm total downloads](https://img.shields.io/npm/dt/react-toc-builder.svg)](https://www.npmjs.com/package/react-toc-builder)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A lightweight and customizable Table of Contents (TOC) generator for React applications. Automatically scans HTML content for headings (h2–h6) and injects a collapsible, stylized TOC with support for custom icons and styling.
