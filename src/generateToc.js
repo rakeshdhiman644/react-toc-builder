@@ -36,7 +36,7 @@ export function generateToc(contentHtml, positionAfter = 0, icon = null) {
   }
   .rtb-toc-list {
     display: none;
-    list-style: none;
+    list-style: none !important;
     padding: 0;
     margin: 0;
   }
@@ -50,6 +50,12 @@ export function generateToc(contentHtml, positionAfter = 0, icon = null) {
     padding: 2px 0;
     transition: color 0.2s;
   }
+  /* Font sizing per heading depth */
+  .rtb-toc-item.rtb-level-2 a { font-size: 1rem; }
+  .rtb-toc-item.rtb-level-3 a { font-size: 0.95rem; }
+  .rtb-toc-item.rtb-level-4 a { font-size: 0.9rem; }
+  .rtb-toc-item.rtb-level-5 a { font-size: 0.85rem; }
+  .rtb-toc-item.rtb-level-6 a { font-size: 0.8rem; }
   .rtb-toc-item a:hover, .rtb-toc-item a.active {
     color: #007bff;
   }
@@ -117,7 +123,7 @@ export function generateToc(contentHtml, positionAfter = 0, icon = null) {
       const itemLabel = prefix ? `${prefix}.${num}` : `${num}`;
       const displayLabel = prefix ? itemLabel : `${itemLabel}.`;
 
-      html += `<li class="rtb-toc-item">
+      html += `<li class="rtb-toc-item rtb-level-${item.level}">
         <a href="#${item.id}">
           <span class="rtb-toc-number">${displayLabel}</span>${item.text}
         </a>
