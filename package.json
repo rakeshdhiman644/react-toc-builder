@@ -1,7 +1,9 @@
 {
   "name": "react-toc-builder",
-  "version": "2.1.2",
+  "version": "2.1.4",
   "description": "A lightweight React Table of Contents generator",
+  "author": "Rakesh Dhiman",
+  "license": "MIT",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
   "files": [
@@ -72,6 +74,5 @@
     "auto toc",
     "react plugin",
     "react widget"
-  ],
-  "license": "MIT"
+  ]
 }

@@ -223,7 +223,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👨‍💻 Author
 
-**Rakesh Kumar**
+**Rakesh Dhiman**
 
 - GitHub: [@rakeshdhiman644](https://github.com/rakeshdhiman644)
 
