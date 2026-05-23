@@ -1,0 +1,166 @@
+/*
+ * react-toc-builder — Default Stylesheet
+ * 
+ * This file is auto-injected as a <style> block when you use generateToc().
+ * You can also import this file directly for customisation:
+ *
+ *   import 'react-toc-builder/styles.css';
+ */
+
+/* ── Card wrapper ───────────────────────────────────────── */
+.rtb-toc {
+  box-sizing: border-box;
+  border: 1px solid #d1d5db;
+  padding: 10px 15px;
+  border-radius: 5px;
+  display: inline-block;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    0 1px 2px rgba(0, 0, 0, 0.04);
+  min-width: 240px;
+  max-width: 440px;
+  background: #ffffff;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #374151;
+  margin-bottom: 1rem;
+}
+
+/* ── Header row ─────────────────────────────────────────── */
+.rtb-toc-header {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  user-select: none;
+}
+.rtb-toc-header b {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: 0.01em;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Toggle button ──────────────────────────────────────── */
+.rtb-toggle-btn {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: #6b7280;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+  flex-shrink: 0;
+}
+.rtb-toggle-btn:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+.rtb-toggle-btn svg,
+.rtb-toggle-btn img {
+  display: block;
+  transition: transform 0.25s ease;
+  pointer-events: none;
+}
+/* Rotate chevron when list is open */
+.rtb-toggle-btn.rtb-open svg,
+.rtb-toggle-btn.rtb-open img {
+  transform: rotate(180deg);
+}
+
+/* ── Divider between header and list ────────────────────── */
+.rtb-toc-list {
+  display: none;
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0 0;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 10px;
+}
+/* Nested lists — always shown when parent is visible */
+.rtb-toc-list .rtb-toc-list {
+  display: block;
+  margin: 4px 0 0 14px;
+  padding: 0 0 0 10px;
+  border-top: none;
+  border-left: 2px solid #e5e7eb;
+  list-style: none;
+}
+
+/* ── Items ───────────────────────────────────────────────── */
+.rtb-toc-item {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  line-height: 1.4;
+}
+.rtb-toc-item + .rtb-toc-item {
+  margin-top: 2px;
+}
+
+/* ── Links ───────────────────────────────────────────────── */
+.rtb-toc-item a {
+  text-decoration: none;
+  color: #374151;
+  display: flex;
+  align-items: baseline;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+.rtb-toc-item a:hover {
+  color: #2563eb;
+  background: #eff6ff;
+  text-decoration: none;
+}
+.rtb-toc-item a.active {
+  color: #1d4ed8;
+  background: #dbeafe;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* ── Font weight / size per heading depth ────────────────── */
+.rtb-toc-item.rtb-level-2 > a {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+.rtb-toc-item.rtb-level-3 > a {
+  font-size: 0.875rem;
+}
+.rtb-toc-item.rtb-level-4 > a {
+  font-size: 0.85rem;
+}
+.rtb-toc-item.rtb-level-5 > a {
+  font-size: 0.825rem;
+}
+.rtb-toc-item.rtb-level-6 > a {
+  font-size: 0.8rem;
+}
+
+/* ── Section number label ────────────────────────────────── */
+.rtb-toc-number {
+  display: inline-block;
+  min-width: 1.6em;
+  margin-right: 5px;
+  font-weight: 500;
+  color: #9ca3af;
+  font-size: 0.82em;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
