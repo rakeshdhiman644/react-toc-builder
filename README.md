@@ -14,7 +14,7 @@ A lightweight and customizable React Table of Contents generator that automatica
 
 <p>
   <img
-    src="https://raw.githubusercontent.com/rakeshdhiman644/react-toc-builder/main/demo/review-demo.gif"
+    src="./demo/review-demo.gif"
     alt="react-toc-builder-demo"
     width="100%"
   />
