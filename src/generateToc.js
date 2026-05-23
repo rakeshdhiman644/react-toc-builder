@@ -1,3 +1,5 @@
+import DOMPurify from "dompurify";
+
 // Styles are now included in every generateToc() call to ensure they work reliably
 // in Single Page Applications where components may be unmounted and remounted.
 
@@ -8,10 +10,9 @@
  * @returns {string}
  */
 function sanitizeSvg(svgStr) {
-  return svgStr
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/\s(on\w+)=["'][^"']*["']/gi, "")
-    .replace(/\s(on\w+)=[^\s>]*/gi, "");
+  return DOMPurify.sanitize(svgStr, {
+    USE_PROFILES: { svg: true },
+  });
 }
 
 /**
@@ -57,22 +58,27 @@ export function generateToc(contentHtml, positionAfter = 0, icon = null) {
       "[react-toc-builder] generateToc() expects a string as the first argument. Received:",
       typeof contentHtml,
     );
+
     return typeof contentHtml === "number" ? String(contentHtml) : "";
   }
 
+  contentHtml = DOMPurify.sanitize(contentHtml, {
+    USE_PROFILES: { html: true },
+  });
+
   // Default SVG icon if none provided
   const defaultIcon = `
-<svg
-  width="18"
-  height="18"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round">
-  <polyline points="6 9 12 15 18 9"></polyline>
-</svg>`;
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round">
+      <polyline points="6 9 12 15 18 9"></polyline>
+    </svg>`;
 
   // --- Fix #8: XSS-safe icon handling ---
   let iconHtml;
@@ -83,7 +89,13 @@ export function generateToc(contentHtml, positionAfter = 0, icon = null) {
     iconHtml = sanitizeSvg(icon);
   } else {
     // Escape the URL so it cannot break out of the attribute
-    iconHtml = `<img src="${escapeAttr(icon)}" alt="toggle-icon" width="18" height="18" />`;
+    const isSafeImage =
+      icon.startsWith("/") ||
+      icon.startsWith("data:image/");
+
+    iconHtml = isSafeImage
+      ? `<img src="${escapeAttr(icon)}" alt="toggle-icon" width="18" height="18" />`
+      : defaultIcon;
   }
 
   // --- Fix #7: Deduplicated <style> block ---
@@ -264,7 +276,9 @@ export function generateToc(contentHtml, positionAfter = 0, icon = null) {
   // unique ID and replacement is done by position, not naive string replace.
   while ((match = headingRegex.exec(contentHtml)) !== null) {
     const level = parseInt(match[1]);
-    const rawInner = match[2];
+    const rawInner = DOMPurify.sanitize(match[2], {
+      USE_PROFILES: { html: true },
+    });
     const text = rawInner.replace(/<[^>]+>/g, "").trim();
     if (!text) continue;
 
@@ -323,7 +337,8 @@ export function generateToc(contentHtml, positionAfter = 0, icon = null) {
 
       html += `<li class="rtb-toc-item rtb-level-${item.level}">
         <a href="#${item.id}">
-          <span class="rtb-toc-number">${displayLabel}</span>${item.text}
+          <span class="rtb-toc-number">${displayLabel}</span>
+          ${escapeAttr(item.text)}
         </a>
         ${item.children.length > 0 ? `<ul class="rtb-toc-list">${renderList(item.children, itemLabel)}</ul>` : ""}
       </li>`;
