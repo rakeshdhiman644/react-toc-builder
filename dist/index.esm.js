@@ -18,15 +18,6 @@ function _nonIterableSpread() {
 function _toConsumableArray(r) {
   return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray$1(r) || _nonIterableSpread();
 }
-function _typeof(o) {
-  "@babel/helpers - typeof";
-
-  return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) {
-    return typeof o;
-  } : function (o) {
-    return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
-  }, _typeof(o);
-}
 function _unsupportedIterableToArray$1(r, a) {
   if (r) {
     if ("string" == typeof r) return _arrayLikeToArray$1(r, a);
@@ -1620,17 +1611,29 @@ function createDOMPurify() {
 }
 var purify = createDOMPurify();
 
-// Styles are now included in every generateToc() call to ensure they work reliably
-// in Single Page Applications where components may be unmounted and remounted.
+/**
+ * Create a single DOMPurify instance for browser usage.
+ * During SSR (Next.js server render), return null safely.
+ */
+var DOMPurifyInstance = typeof window !== "undefined" ? purify(window) : null;
 
 /**
- * Sanitizes a user-supplied SVG string to prevent XSS.
- * Strips <script> tags and inline event-handler attributes.
- * @param {string} svgStr
- * @returns {string}
+ * Safely sanitize HTML/SVG.
+ * On server-side render, return original HTML to avoid hydration mismatch.
+ */
+function sanitize(html) {
+  var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  if (!DOMPurifyInstance) {
+    return html;
+  }
+  return DOMPurifyInstance.sanitize(html, options);
+}
+
+/**
+ * Sanitizes SVG content safely.
  */
 function sanitizeSvg(svgStr) {
-  return purify.sanitize(svgStr, {
+  return sanitize(svgStr, {
     USE_PROFILES: {
       svg: true
     }
@@ -1638,90 +1641,77 @@ function sanitizeSvg(svgStr) {
 }
 
 /**
- * Escapes a string for safe use inside an HTML attribute value (double-quoted).
- * @param {string} value
- * @returns {string}
+ * Escapes text for safe HTML attribute usage.
  */
 function escapeAttr(value) {
-  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return String(value).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 /**
- * Generates a short random hex string to use as a unique call-level prefix.
- * This prevents heading ID collisions across multiple generateToc() calls
- * on the same page.
- * @returns {string}
+ * Generate stable SEO-friendly heading IDs.
  */
-function uid() {
-  return Math.random().toString(16).slice(2, 8);
+function createHeadingId(text, index) {
+  var safeText = text.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 50);
+  return "rtb-".concat(safeText || "heading", "-").concat(index);
 }
 
 /**
- * Generates a Table of Contents (TOC) from HTML content and injects it
- * into the content at the specified position.
- *
- * @param {string} contentHtml - The HTML string to scan for headings (h2–h6).
- * @param {number} [positionAfter=0] - Zero-based paragraph index after which
- *   to insert the TOC. Pass -1 to prepend the TOC before all content.
- *   Example: 0 = after the 1st paragraph, 1 = after the 2nd paragraph.
- * @param {string|null} [icon=null] - Custom toggle icon. Accepts an SVG string
- *   or an image URL. Defaults to a built-in chevron SVG.
- * @returns {string} The modified HTML string with the embedded TOC.
+ * Generates a Table of Contents (TOC) from HTML content.
  */
 function generateToc(contentHtml) {
   var positionAfter = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
   var icon = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
-  // --- Fix #1: Input validation ---
+  // Validate input
   if (typeof contentHtml !== "string") {
-    console.warn("[react-toc-builder] generateToc() expects a string as the first argument. Received:", _typeof(contentHtml));
+    console.warn("[react-toc-builder] generateToc() expects a string.");
     return typeof contentHtml === "number" ? String(contentHtml) : "";
   }
-  contentHtml = purify.sanitize(contentHtml, {
+
+  // Sanitize incoming HTML
+  contentHtml = sanitize(contentHtml, {
     USE_PROFILES: {
       html: true
     }
   });
 
-  // Default SVG icon if none provided
-  var defaultIcon = "\n    <svg\n      width=\"18\"\n      height=\"18\"\n      viewBox=\"0 0 24 24\"\n      fill=\"none\"\n      stroke=\"currentColor\"\n      stroke-width=\"2\"\n      stroke-linecap=\"round\"\n      stroke-linejoin=\"round\">\n      <polyline points=\"6 9 12 15 18 9\"></polyline>\n    </svg>";
+  /**
+   * Default SVG icon
+   */
+  var defaultIcon = "\n    <svg\n      width=\"18\"\n      height=\"18\"\n      viewBox=\"0 0 24 24\"\n      fill=\"none\"\n      stroke=\"currentColor\"\n      stroke-width=\"2\"\n      stroke-linecap=\"round\"\n      stroke-linejoin=\"round\"\n    >\n      <polyline points=\"6 9 12 15 18 9\"></polyline>\n    </svg>\n  ";
 
-  // --- Fix #8: XSS-safe icon handling ---
+  /**
+   * Safe icon handling
+   */
   var iconHtml;
   if (!icon) {
     iconHtml = defaultIcon;
-  } else if (icon.trim().startsWith("<svg")) {
-    // Sanitize SVG — strip <script> and event handlers
+  } else if (typeof icon === "string" && icon.trim().startsWith("<svg")) {
     iconHtml = sanitizeSvg(icon);
+  } else if (typeof icon === "string" && (icon.startsWith("/") || icon.startsWith("data:image/"))) {
+    iconHtml = "\n      <img\n        src=\"".concat(escapeAttr(icon), "\"\n        alt=\"toggle-icon\"\n        width=\"18\"\n        height=\"18\"\n      />\n    ");
   } else {
-    // Escape the URL so it cannot break out of the attribute
-    var isSafeImage = icon.startsWith("/") || icon.startsWith("data:image/");
-    iconHtml = isSafeImage ? "<img src=\"".concat(escapeAttr(icon), "\" alt=\"toggle-icon\" width=\"18\" height=\"18\" />") : defaultIcon;
+    iconHtml = defaultIcon;
   }
 
-  // --- Fix #7: Deduplicated <style> block ---
-  // The style block is emitted only once per page (tracked via module-level flag).
-  // A data attribute marks the tag so a future reset is possible if needed.
-  var styleBlock = "<style data-rtb-style=\"1\">\n  /* react-toc-builder \u2014 default styles */\n\n  /* \u2500\u2500 Card wrapper \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n  .rtb-toc {\n    box-sizing: border-box;\n    border: 1px solid #d1d5db;\n    padding: 10px 15px;\n    border-radius: 5px;\n    display: inline-block;\n    box-shadow: 0 2px 8px rgba(0, 0, 0, .08), 0 1px 2px rgba(0, 0, 0, .04);\n    min-width: 240px;\n    max-width: 440px;\n    background: #ffffff;\n    font-size: 14px;\n    line-height: 1.5;\n    color: #374151;\n    margin-bottom: 1rem;\n  }\n\n  /* \u2500\u2500 Header row \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n  .rtb-toc-header {\n    margin: 0;\n    padding: 0;\n    display: flex;\n    align-items: center;\n    justify-content: space-between;\n    gap: 10px;\n    user-select: none;\n  }\n  .rtb-toc-header b {\n    display: block;\n    font-size: 0.92rem;\n    font-weight: 700;\n    color: #111827;\n    letter-spacing: 0.01em;\n    margin: 0;\n    padding: 0;\n  }\n\n  /* \u2500\u2500 Toggle button \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n  .rtb-toggle-btn {\n    all: unset;\n    cursor: pointer;\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    width: 28px;\n    height: 28px;\n    border-radius: 6px;\n    color: #6b7280;\n    transition: background 0.15s ease, color 0.15s ease;\n    flex-shrink: 0;\n  }\n  .rtb-toggle-btn:hover {\n    background: #f3f4f6;\n    color: #374151;\n  }\n  .rtb-toggle-btn svg,\n  .rtb-toggle-btn img {\n    display: block;\n    transition: transform 0.25s ease;\n    pointer-events: none;\n  }\n  /* Rotate chevron when list is open */\n  .rtb-toggle-btn.rtb-open svg,\n  .rtb-toggle-btn.rtb-open img {\n    transform: rotate(180deg);\n  }\n\n  /* \u2500\u2500 Divider between header and list \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n  .rtb-toc-list {\n    display: none;\n    list-style: none;\n    padding: 0;\n    margin: 12px 0 0 0;\n    border-top: 1px solid #e5e7eb;\n    padding-top: 10px;\n  }\n  /* Nested lists \u2014 always shown when parent is visible */\n  .rtb-toc-list .rtb-toc-list {\n    display: block;\n    margin: 4px 0 0 14px;\n    padding: 0 0 0 10px;\n    border-top: none;\n    border-left: 2px solid #e5e7eb;\n    list-style: none;\n  }\n\n  /* \u2500\u2500 Items \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n  .rtb-toc-item {\n    list-style: none;\n    margin: 0;\n    padding: 0;\n    line-height: 1.4;\n  }\n  .rtb-toc-item + .rtb-toc-item {\n    margin-top: 2px;\n  }\n\n  /* \u2500\u2500 Links \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n  .rtb-toc-item a {\n    text-decoration: none;\n    color: #374151;\n    display: flex;\n    align-items: baseline;\n    padding: 4px 8px;\n    border-radius: 6px;\n    transition: background 0.12s ease, color 0.12s ease;\n    font-size: 0.875rem;\n    line-height: 1.4;\n  }\n  .rtb-toc-item a:hover {\n    color: #2563eb;\n    background: #eff6ff;\n    text-decoration: none;\n  }\n  .rtb-toc-item a.active {\n    color: #1d4ed8;\n    background: #dbeafe;\n    font-weight: 600;\n    text-decoration: none;\n  }\n\n  /* \u2500\u2500 Font weight / size per heading depth \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n  .rtb-toc-item.rtb-level-2 > a {\n    font-size: 0.9rem;\n    font-weight: 600;\n    color: #1f2937;\n  }\n  .rtb-toc-item.rtb-level-3 > a { font-size: 0.875rem; }\n  .rtb-toc-item.rtb-level-4 > a { font-size: 0.85rem;  }\n  .rtb-toc-item.rtb-level-5 > a { font-size: 0.825rem; }\n  .rtb-toc-item.rtb-level-6 > a { font-size: 0.8rem;   }\n\n  /* \u2500\u2500 Section number label \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n  .rtb-toc-number {\n    display: inline-block;\n    min-width: 1.6em;\n    margin-right: 5px;\n    font-weight: 500;\n    color: #9ca3af;\n    font-size: 0.82em;\n    font-variant-numeric: tabular-nums;\n    flex-shrink: 0;\n  }\n</style>";
+  /**
+   * Styles
+   */
+  var styleBlock = "\n<style data-rtb-style=\"1\">\n.rtb-toc {\n  box-sizing: border-box;\n  border: 1px solid #d1d5db;\n  padding: 10px 15px;\n  border-radius: 5px;\n  display: inline-block;\n  box-shadow:\n    0 2px 8px rgba(0,0,0,.08),\n    0 1px 2px rgba(0,0,0,.04);\n  min-width: 240px;\n  max-width: 440px;\n  background: #fff;\n  font-size: 14px;\n  line-height: 1.5;\n  color: #374151;\n  margin-bottom: 1rem;\n}\n\n.rtb-toc-header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 10px;\n}\n\n.rtb-toc-header b {\n  font-size: 0.92rem;\n  font-weight: 700;\n  color: #111827;\n}\n\n.rtb-toggle-btn {\n  all: unset;\n  cursor: pointer;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 28px;\n  height: 28px;\n  border-radius: 6px;\n  color: #6b7280;\n  transition: background .15s ease, color .15s ease;\n}\n\n.rtb-toggle-btn:hover {\n  background: #f3f4f6;\n  color: #374151;\n}\n\n.rtb-toggle-btn svg,\n.rtb-toggle-btn img {\n  display: block;\n  transition: transform .25s ease;\n  pointer-events: none;\n}\n\n.rtb-toggle-btn.rtb-open svg,\n.rtb-toggle-btn.rtb-open img {\n  transform: rotate(180deg);\n}\n\n.rtb-toc-list {\n  display: none;\n  list-style: none;\n  padding: 0;\n  margin: 12px 0 0;\n  border-top: 1px solid #e5e7eb;\n  padding-top: 10px;\n}\n\n.rtb-toc-list .rtb-toc-list {\n  display: block;\n  margin: 4px 0 0 14px;\n  padding-left: 10px;\n  border-left: 2px solid #e5e7eb;\n  border-top: none;\n}\n\n.rtb-toc-item {\n  list-style: none;\n  line-height: 1.4;\n}\n\n.rtb-toc-item + .rtb-toc-item {\n  margin-top: 2px;\n}\n\n.rtb-toc-item a {\n  text-decoration: none;\n  color: #374151;\n  display: flex;\n  align-items: baseline;\n  padding: 4px 8px;\n  border-radius: 6px;\n  transition:\n    background .12s ease,\n    color .12s ease;\n  font-size: .875rem;\n}\n\n.rtb-toc-item a:hover {\n  color: #2563eb;\n  background: #eff6ff;\n}\n\n.rtb-toc-item a.active {\n  color: #1d4ed8;\n  background: #dbeafe;\n  font-weight: 600;\n}\n\n.rtb-toc-item.rtb-level-2 > a {\n  font-size: .9rem;\n  font-weight: 600;\n  color: #1f2937;\n}\n\n.rtb-toc-number {\n  display: inline-block;\n  min-width: 1.6em;\n  margin-right: 5px;\n  font-weight: 500;\n  color: #9ca3af;\n  font-size: .82em;\n}\n</style>\n";
 
-  // --- End of style block ---
+  /**
+   * TOC Wrapper
+   */
+  var tocHtml = "\n".concat(styleBlock, "\n\n<div class=\"rtb-toc\">\n  <div class=\"rtb-toc-header\">\n    <b>Table of Contents</b>\n\n    <button\n      data-toc-toggle\n      class=\"rtb-toggle-btn\"\n      aria-label=\"Toggle TOC\"\n    >\n      ").concat(iconHtml, "\n    </button>\n  </div>\n\n  <ul class=\"rtb-toc-list\" style=\"display:none;\">\n");
 
-  var tocHtml = "".concat(styleBlock, "\n  <div class=\"rtb-toc\">\n    <div class=\"rtb-toc-header\">\n      <b>Table of Contents</b>\n      <button data-toc-toggle class=\"rtb-toggle-btn\" aria-label=\"Toggle TOC\">\n        ").concat(iconHtml, "\n      </button>\n    </div>\n    <ul class=\"rtb-toc-list\" style=\"display: none;\">\n");
-
-  // --- Fix #4: Per-call unique prefix prevents ID collisions across calls ---
-  var callId = uid();
-
-  // --- Fix #2 & #6: Heading regex with dotAll flag (s) for multiline headings ---
+  /**
+   * Extract headings
+   */
   var headingRegex = /<h([2-6])[^>]*>([^]*?)<\/h\1>/gi;
   var match;
   var headings = [];
-
-  // --- Fix #3: Collect all headings with their positions first ---
-  // We record each match's position (index) and use a counter per call
-  // rather than matching by raw string, so identical headings each get a
-  // unique ID and replacement is done by position, not naive string replace.
   while ((match = headingRegex.exec(contentHtml)) !== null) {
     var level = parseInt(match[1]);
-    var rawInner = purify.sanitize(match[2], {
+    var rawInner = sanitize(match[2], {
       USE_PROFILES: {
         html: true
       }
@@ -1732,25 +1722,19 @@ function generateToc(contentHtml) {
       level: level,
       text: text,
       rawInner: rawInner,
-      fullMatch: match[0],
       index: match.index,
       length: match[0].length
     });
   }
 
-  // Assign unique IDs and inject them into the content by working
-  // backwards through the string (so earlier indices stay stable).
+  /**
+   * Inject heading IDs
+   */
   var contentWithIds = contentHtml;
   var headingNodes = [];
-
-  // Process in reverse order to preserve indices while splicing
-  var reversed = [].concat(headings).reverse();
-  reversed.forEach(function (h, ri) {
-    // Stable unique ID: callId + level + original heading order index
+  [].concat(headings).reverse().forEach(function (h, ri) {
     var orderIndex = headings.length - 1 - ri;
-    var id = "rtb-".concat(callId, "-h").concat(h.level, "-").concat(orderIndex);
-
-    // Replace by position, not by string content — fixes duplicate headings
+    var id = createHeadingId(h.text, orderIndex);
     contentWithIds = contentWithIds.slice(0, h.index) + "<h".concat(h.level, " id=\"").concat(id, "\">").concat(h.rawInner, "</h").concat(h.level, ">") + contentWithIds.slice(h.index + h.length);
     headingNodes.unshift({
       level: h.level,
@@ -1760,7 +1744,9 @@ function generateToc(contentHtml) {
     });
   });
 
-  // 2. Build Tree Structure
+  /**
+   * Build heading tree
+   */
   var root = {
     level: 0,
     children: []
@@ -1770,30 +1756,31 @@ function generateToc(contentHtml) {
     while (stack.length > 1 && stack[stack.length - 1].level >= heading.level) {
       stack.pop();
     }
-    var parent = stack[stack.length - 1];
-    parent.children.push(heading);
+    stack[stack.length - 1].children.push(heading);
     stack.push(heading);
   });
 
-  // 3. Recursive Render
+  /**
+   * Recursive TOC renderer
+   */
   function renderList(items) {
     var prefix = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "";
-    if (items.length === 0) return "";
+    if (!items.length) return "";
     var html = "";
     items.forEach(function (item, index) {
       var num = index + 1;
       var itemLabel = prefix ? "".concat(prefix, ".").concat(num) : "".concat(num);
       var displayLabel = prefix ? itemLabel : "".concat(itemLabel, ".");
-      html += "<li class=\"rtb-toc-item rtb-level-".concat(item.level, "\">\n        <a href=\"#").concat(item.id, "\">\n          <span class=\"rtb-toc-number\">").concat(displayLabel, "</span>\n          ").concat(escapeAttr(item.text), "\n        </a>\n        ").concat(item.children.length > 0 ? "<ul class=\"rtb-toc-list\">".concat(renderList(item.children, itemLabel), "</ul>") : "", "\n      </li>");
+      html += "\n<li class=\"rtb-toc-item rtb-level-".concat(item.level, "\">\n  <a href=\"#").concat(item.id, "\">\n    <span class=\"rtb-toc-number\">\n      ").concat(displayLabel, "\n    </span>\n\n    ").concat(escapeAttr(item.text), "\n  </a>\n\n  ").concat(item.children.length ? "\n      <ul class=\"rtb-toc-list\">\n        ".concat(renderList(item.children, itemLabel), "\n      </ul>\n    ") : "", "\n</li>\n");
     });
     return html;
   }
   tocHtml += renderList(root.children);
-  tocHtml += "\n    </ul>\n  </div>\n";
+  tocHtml += "\n  </ul>\n</div>\n";
 
-  // --- Fix #5: Paragraph regex with dotAll flag (s) for multiline <p> tags ---
-  // --- Fix (doc): positionAfter=0 means after the 1st paragraph (index 0).
-  //                positionAfter=-1 prepends the TOC before all content. ---
+  /**
+   * Insert TOC after paragraph
+   */
   if (positionAfter >= 0) {
     var paragraphRegex = /(<p[^>]*>[^]*?<\/p>)/gi;
     var paragraphs = _toConsumableArray(contentWithIds.matchAll(paragraphRegex));
@@ -1802,11 +1789,9 @@ function generateToc(contentHtml) {
       var insertAt = target.index + target[0].length;
       contentWithIds = contentWithIds.slice(0, insertAt) + tocHtml + contentWithIds.slice(insertAt);
     } else {
-      // Not enough paragraphs — append to end
       contentWithIds += tocHtml;
     }
   } else {
-    // positionAfter < 0 — prepend before all content
     contentWithIds = tocHtml + contentWithIds;
   }
   return contentWithIds;

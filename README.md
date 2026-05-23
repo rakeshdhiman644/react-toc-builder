@@ -3,95 +3,220 @@
 [![npm version](https://img.shields.io/npm/v/react-toc-builder.svg)](https://www.npmjs.com/package/react-toc-builder)
 [![npm downloads](https://img.shields.io/npm/dm/react-toc-builder.svg)](https://www.npmjs.com/package/react-toc-builder)
 [![npm total downloads](https://img.shields.io/npm/dt/react-toc-builder.svg)](https://www.npmjs.com/package/react-toc-builder)
+[![Bundle Size](https://img.shields.io/bundlephobia/min/react-toc-builder)](https://bundlephobia.com/package/react-toc-builder)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A lightweight and customizable Table of Contents (TOC) generator for React applications. Automatically scans HTML content for headings (h2–h6) and injects a collapsible, stylized TOC with support for custom icons and styling.
+A lightweight and customizable React Table of Contents generator that automatically creates a nested TOC from HTML headings (`h2–h6`) with smooth styling, collapsible behavior, custom icons, and SSR support.
+
+---
 
 ## 🎬 Demo
 
 <p>
-  <img src="./demo/review-demo.gif" alt="react-toc-builder-demo" width="100%" />
+  <img
+    src="https://raw.githubusercontent.com/rakeshdhiman644/react-toc-builder/main/demo/review-demo.gif"
+    alt="react-toc-builder-demo"
+    width="100%"
+  />
 </p>
+
+---
 
 ## ✨ Features
 
-- 🚀 **Lightweight**: Minimal bundle size with zero dependencies
-- 🎨 **Customizable**: Full control over styling and appearance
-- 📱 **Responsive**: Works seamlessly across all device sizes
-- 🔧 **Flexible**: Configurable position, icons, and behavior
-- ⚡ **Fast**: Efficient DOM scanning and TOC generation
-- 🎯 **Accessible**: Built with accessibility in mind
+- 🚀 Lightweight and optimized
+- 🎨 Fully customizable styling
+- ⚡ Fast HTML heading parsing
+- 📱 Responsive design
+- 🔧 Supports custom icons and SVGs
+- 🌐 SSR compatible (Next.js supported)
+- 🛡️ DOMPurify-based sanitization
+- 🎯 Accessible and keyboard-friendly
+- 🧩 Supports nested heading structures (`h2` → `h6`)
+- 🔗 Stable SEO-friendly heading IDs
+
+---
 
 ## 📦 Installation
 
 ```bash
-npm install react-toc-builder@latest
+npm install react-toc-builder
 ```
 
 or
 
 ```bash
-yarn add react-toc-builder@latest
+yarn add react-toc-builder
 ```
+
+---
 
 ## 🚀 Quick Start
 
 ```jsx
-import React from 'react';
-import { generateToc, TocWrapper } from 'react-toc-builder';
+"use client";
+
+import React from "react";
+import {
+  generateToc,
+  TocWrapper,
+} from "react-toc-builder";
 
 const BlogContent = () => {
   const content = `
     <p>Welcome to my blog!</p>
+
     <h2>Introduction</h2>
     <p>This is the intro.</p>
+
     <h3>Overview</h3>
     <p>Some overview text.</p>
+
     <h2>Getting Started</h2>
     <p>Let's dive in!</p>
   `;
 
-  const htmlWithToc = generateToc(content, 1, "/toc-icon.png");
+  const htmlWithToc = generateToc(
+    content,
+    1,
+    "/toc-icon.png"
+  );
 
-  return <TocWrapper html={htmlWithToc} />;
+  return (
+    <TocWrapper html={htmlWithToc} />
+  );
 };
 
 export default BlogContent;
 ```
 
-## 📘 Using in Next.js or TypeScript Projects
+---
 
-When using this package inside a Next.js or TypeScript project, you may notice two common warnings. First, TypeScript may show: `“Could not find a declaration file for module 'react-toc-builder'”`. Since the package currently does not include built-in type definitions, you can fix this by creating a file named `react-toc-builder.d.ts` in the root of your project and adding `declare module "react-toc-builder";`.This ensures TypeScript understands the module and removes the error.
+## 📘 Next.js & TypeScript Support
 
-Additionally, if you are using the Next.js App Router, you might see the message: `“useEffect only works in Client Components`. Add the `"use client"` directive at the top of the file”. This occurs because `TocWrapper` internally uses `useEffect`. To resolve this, make sure that any Next.js component where you use `TocWrapper` includes `"use client"` at the very top of the file. Once these two small adjustments are made, the package works smoothly in both TypeScript and modern Next.js environments.
+### Next.js App Router
+
+`TocWrapper` uses React hooks internally.
+
+If you are using Next.js App Router, add:
+
+```js
+"use client";
+```
+
+at the top of the component file where you use `TocWrapper`.
+
+---
+
+### TypeScript Support
+
+If TypeScript cannot find module definitions, create:
+
+```bash
+react-toc-builder.d.ts
+```
+
+and add:
+
+```ts
+declare module "react-toc-builder";
+```
+
+---
 
 ## 📖 API Reference
 
+---
+
 ### `generateToc(htmlContent, positionAfter, icon)`
 
-Generates a table of contents from HTML content and returns the modified HTML string.
+Generates a Table of Contents from HTML content.
 
 #### Parameters
 
-- `htmlContent` (string): The HTML content to scan for headings
-- `positionAfter` (number, optional): Insert TOC after paragraph index (default: 0)
-- `icon` (string, optional): Path to custom icon or image URL (default: null)
+| Parameter | Type | Description |
+|---|---|---|
+| `htmlContent` | `string` | HTML string containing headings |
+| `positionAfter` | `number` | Insert TOC after paragraph index |
+| `icon` | `string` | Custom image URL or SVG string |
+
+#### Example
+
+```jsx
+const htmlWithToc = generateToc(
+  content,
+  1,
+  "/toc-icon.png"
+);
+```
+
+---
 
 ### `TocWrapper`
 
-React component that renders the HTML content with the generated TOC.
+React component that safely renders generated TOC HTML.
 
 #### Props
 
-- `html` (string): HTML content with embedded TOC (generated by `generateToc`)
+| Prop | Type | Description |
+|---|---|---|
+| `html` | `string` | Generated HTML from `generateToc()` |
+
+#### Example
+
+```jsx
+<TocWrapper html={htmlWithToc} />
+```
+
+---
+
+## 🎨 Custom Icons
+
+---
+
+### Image Icon
+
+```jsx
+const htmlWithToc = generateToc(
+  content,
+  1,
+  "/assets/toc-icon.png"
+);
+```
+
+---
+
+### Custom SVG Icon
+
+```jsx
+const customIcon = `
+<svg
+  width="18"
+  height="18"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+>
+  <polyline points="6 9 12 15 18 9"></polyline>
+</svg>
+`;
+
+const htmlWithToc = generateToc(
+  content,
+  1,
+  customIcon
+);
+```
+
+---
 
 ## 🎨 Styling
 
-The component uses CSS classes for easy customization:
+The component uses simple CSS classes for customization.
 
 ```css
 .rtb-toc {
-  /* Main TOC wrapper */
   border: 1px solid #e1e5e9;
   border-radius: 8px;
   margin: 20px 0;
@@ -99,33 +224,26 @@ The component uses CSS classes for easy customization:
 }
 
 .rtb-toc-header {
-  /* TOC header section */
   display: flex;
   align-items: center;
-  cursor: pointer;
-  font-weight: 600;
+  justify-content: space-between;
 }
 
 .rtb-toggle-btn {
-  /* Toggle button */
-  margin-right: 8px;
-  transition: transform 0.2s ease;
+  cursor: pointer;
 }
 
 .rtb-toc-list {
-  /* List container */
   margin-top: 12px;
   padding-left: 0;
 }
 
 .rtb-toc-item {
-  /* Each TOC item */
   list-style: none;
   margin: 4px 0;
 }
 
 .rtb-toc-item a {
-  /* TOC links */
   text-decoration: none;
   color: #0366d6;
 }
@@ -135,98 +253,141 @@ The component uses CSS classes for easy customization:
 }
 ```
 
+---
+
 ## 📁 Example Project Structure
 
-```
+```bash
 my-app/
 ├── public/
 │   ├── toc-icon.png
 │   └── custom-icon.svg
 ├── src/
 │   ├── components/
-│   │   └── BlogContent.js
-│   └── App.js
+│   │   └── BlogContent.jsx
+│   └── App.jsx
 ├── package.json
 └── README.md
 ```
 
+---
+
 ## 🔧 Advanced Usage
 
-### Custom Icon Integration
-
-```jsx
-const htmlWithToc = generateToc(content, 2, "/assets/toc-icon.svg");
-```
+---
 
 ### Multiple TOC Instances
 
 ```jsx
-const Article = () => {
-  const [content, setContent] = useState('');
-
-  const addTocToContent = (htmlContent) => {
-    return generateToc(htmlContent, 1, "/toc-icon.png");
-  };
-
-  return (
-    <div>
-      <TocWrapper html={addTocToContent(content)} />
-    </div>
+const addTocToContent = (htmlContent) => {
+  return generateToc(
+    htmlContent,
+    1,
+    "/toc-icon.png"
   );
 };
+
+<TocWrapper html={addTocToContent(content)} />;
 ```
+
+---
+
+### Insert TOC at Top
+
+```jsx
+generateToc(content, -1);
+```
+
+---
+
+### Insert TOC After Second Paragraph
+
+```jsx
+generateToc(content, 1);
+```
+
+---
+
+## 🔒 Security
+
+`react-toc-builder` sanitizes generated HTML using DOMPurify for safer rendering.
+
+However, for maximum security, it is strongly recommended to sanitize untrusted CMS or user-generated HTML on your backend/server before passing it into `generateToc()`.
+
+---
+
+## 📋 Requirements
+
+- React 17+
+- React DOM 17+
+- Supports React 19
+- Supports Next.js App Router
+
+---
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+Contributions are welcome.
 
 ### Development Setup
 
 ```bash
-# Clone the repository
 git clone https://github.com/rakeshdhiman644/react-toc-builder.git
+
 cd react-toc-builder
 
-# Install dependencies
 npm install
 
-# Build the package
 npm run build
+```
 
-# Link for local development
+---
+
+### Local Testing
+
+Inside package folder:
+
+```bash
 npm link
 ```
 
-Then in your React app:
+Inside React app:
+
 ```bash
 npm link react-toc-builder
 ```
 
-## 📋 Requirements
-
-- React 17 or higher
-- React DOM 17 or higher
+---
 
 ## 🐛 Bug Reports
 
-If you find a bug, please file an issue on our [GitHub repository](https://github.com/rakeshdhiman644/react-toc-builder/issues).
+Found a bug?
 
-## 📄 License
+Please open an issue on GitHub:
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🔗 Links
-
-- [NPM Package](https://www.npmjs.com/package/react-toc-builder)
-- [GitHub Repository](https://github.com/rakeshdhiman644/react-toc-builder)
-- [Documentation](https://github.com/rakeshdhiman644/react-toc-builder#readme)
-
-## 👨‍💻 Author
-
-**Rakesh Dhiman**
-
-- GitHub: [@rakeshdhiman644](https://github.com/rakeshdhiman644)
+https://github.com/rakeshdhiman644/react-toc-builder/issues
 
 ---
 
-⭐ If you found this package helpful, please give it a star on GitHub!
+## 📄 License
+
+MIT License © Rakesh Dhiman
+
+---
+
+## 🔗 Links
+
+- NPM: https://www.npmjs.com/package/react-toc-builder
+- GitHub: https://github.com/rakeshdhiman644/react-toc-builder
+
+---
+
+## 👨‍💻 Author
+
+### Rakesh Dhiman
+
+- GitHub: https://github.com/rakeshdhiman644
+
+---
+
+⭐ If you found this package useful, please consider starring the repository.
