@@ -1,6 +1,6 @@
 {
   "name": "react-toc-builder",
-  "version": "2.2.2",
+  "version": "2.2.4",
   "description": "A lightweight React Table of Contents generator",
   "author": "Rakesh Dhiman",
   "license": "MIT",
@@ -19,7 +19,8 @@
     "dist",
     "demo",
     "src/index.d.ts",
-    "styles.css"
+    "styles.css",
+    "README.md"
   ],
   "scripts": {
     "build": "rollup -c",
